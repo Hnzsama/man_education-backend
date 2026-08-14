@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                        String         @id @default(uuid())
+  email                     String         @unique
+  password                  String
+  name                      String
+  avatar                    String?
+  role                      Role           @default(INDIVIDUAL)
+  classCode                 String?        @unique
+  whatsappGroupId           String?        @unique
+  joinedClassId             String?
+  joinedClass               User?          @relation("ClassStudents", fields: [joinedClassId], references: [id])
+  students                  User[]         @relation("ClassStudents")
+  emailVerified             Boolean        @default(true)
+  verificationCode          String?
+  remindersEnabled          Boolean        @default(false)
+  semesterTransitionEnabled Boolean        @default(true)
+  scheduleReminderOffsets   Int[]          @default([360, 180, 60])
+  taskReminderOffsets       Int[]          @default([1440, 720])
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  semesters                 Semester[]
+  tasks                     Task[]
+  sentReminders             SentReminder[]
+}
+
+enum Role {
+  INDIVIDUAL
+  CLASS
+}
+
+model Semester {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses   Course[]
+}
+
+model Course {
+  id         String     @id @default(uuid())
+  semesterId String
+  code       String
+  name       String
+  credits    Int
+  lecturer   String?
+  semester   Semester   @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  schedules  Schedule[]
+  tasks      Task[]
+}
+
+model Schedule {
+  id         String              @id @default(uuid())
+  courseId   String
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  room       String?
+  link       String?             // URL kelas online (Zoom/Meet/Teams)
+  course     Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  exceptions ScheduleException[]
+}
+
+model ScheduleException {
+  id           String        @id @default(uuid())
+  scheduleId   String
+  date         String        // YYYY-MM-DD (date string, timezone-safe)
+  type         ExceptionType @default(CANCELLED)
+  newStartTime String?       // jika MOVED
+  newEndTime   String?
+  newRoom      String?
+  newLink      String?       // link override untuk hari itu
+  note         String?
+  schedule     Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, date])  // satu exception per jadwal per hari
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  userId      String
+  courseId    String?
+  title       String
+  description String?
+  deadline    DateTime
+  status      TaskStatus @default(PENDING)
+  priority    Priority   @default(MEDIUM)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course?    @relation(fields: [courseId], references: [id], onDelete: SetNull)
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ExceptionType {
+  CANCELLED  // kelas dibatalkan
+  MOVED      // waktu/ruang berubah
+  NOTE       // hanya catatan informasi
+}
+
+model SentReminder {
+  id        String   @id @default(uuid())
+  userId    String
+  targetId  String   // scheduleId or taskId
+  offset    Int      // the offset that triggered it (e.g. 6)
+  sentAt    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WhatsappQueue {
+  id        String   @id @default(uuid())
+  groupId   String
+  message   String
+  isHidetag Boolean  @default(false)
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
