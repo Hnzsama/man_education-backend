@@ -25,7 +25,10 @@ export class SemesterController {
     try {
       const response = await fetch(`https://api-hari-libur.vercel.app/api?year=${targetYear}`);
       if (response.ok) {
-        return response.json();
+        const json = await response.json();
+        // API returns { status, code, data: [...] } — unwrap the array
+        if (Array.isArray(json)) return json;
+        if (json?.data && Array.isArray(json.data)) return json.data;
       }
     } catch (err) {
       // fallback

@@ -30,12 +30,14 @@ export class ReminderCronService {
       try {
         const response = await fetch(`https://api-hari-libur.vercel.app/api?year=${currYear}`);
         if (response.ok) {
-          const holidays = await response.json();
+          const json = await response.json();
+          // API returns { status, code, data: [...] } — unwrap
+          const holidays: any[] = Array.isArray(json) ? json : (json?.data ?? []);
           const jakartaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
-          const todayHoliday = holidays.find((h: any) => h.holiday_date === jakartaDateStr);
+          const todayHoliday = holidays.find((h: any) => h.date === jakartaDateStr);
           if (todayHoliday) {
             isTodayHoliday = true;
-            holidayName = todayHoliday.holiday_name;
+            holidayName = todayHoliday.description;
           }
         }
       } catch (err) {
