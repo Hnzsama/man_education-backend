@@ -1,8 +1,16 @@
--- CreateEnum
-CREATE TYPE IF NOT EXISTS "Role" AS ENUM ('STUDENT', 'TEACHER', 'ADMIN');
+-- CreateEnum: Role (safe idempotent)
+DO $$ BEGIN
+  CREATE TYPE "Role" AS ENUM ('STUDENT', 'TEACHER', 'ADMIN');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
--- CreateEnum  
-CREATE TYPE IF NOT EXISTS "NotificationChannel" AS ENUM ('WHATSAPP', 'EMAIL', 'BOTH');
+-- CreateEnum: NotificationChannel (safe idempotent)
+DO $$ BEGIN
+  CREATE TYPE "NotificationChannel" AS ENUM ('WHATSAPP', 'EMAIL', 'BOTH');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- AlterTable: Semester
 ALTER TABLE "Semester" ADD COLUMN IF NOT EXISTS "academicStartDate" TIMESTAMP(3);
@@ -26,9 +34,13 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "joinedClassId" TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS "User_classCode_key" ON "User"("classCode");
 CREATE UNIQUE INDEX IF NOT EXISTS "User_whatsappGroupId_key" ON "User"("whatsappGroupId");
 
--- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT IF NOT EXISTS "User_joinedClassId_fkey" 
-  FOREIGN KEY ("joinedClassId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- AddForeignKey: User joinedClassId (safe idempotent)
+DO $$ BEGIN
+  ALTER TABLE "User" ADD CONSTRAINT "User_joinedClassId_fkey"
+    FOREIGN KEY ("joinedClassId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- CreateTable: WhatsappQueue
 CREATE TABLE IF NOT EXISTS "WhatsappQueue" (
@@ -53,6 +65,10 @@ CREATE TABLE IF NOT EXISTS "SentReminder" (
 -- CreateIndex: SentReminder
 CREATE UNIQUE INDEX IF NOT EXISTS "SentReminder_userId_reminderKey_key" ON "SentReminder"("userId", "reminderKey");
 
--- AddForeignKey: SentReminder
-ALTER TABLE "SentReminder" ADD CONSTRAINT IF NOT EXISTS "SentReminder_userId_fkey"
-  FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey: SentReminder (safe idempotent)
+DO $$ BEGIN
+  ALTER TABLE "SentReminder" ADD CONSTRAINT "SentReminder_userId_fkey"
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
