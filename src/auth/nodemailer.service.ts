@@ -45,4 +45,19 @@ export class NodemailerService {
       throw new Error('Failed to send verification email');
     }
   }
+
+  async sendReminderEmail(email: string, subject: string, htmlContent: string): Promise<void> {
+    const mailOptions = {
+      from: `"Man Education" <${process.env.EMAIL_USER || 'ayokeloladiri@gmail.com'}>`,
+      to: email,
+      subject: subject,
+      html: htmlContent,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (err) {
+      console.error('Nodemailer failed to send reminder email:', err);
+    }
+  }
 }

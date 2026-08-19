@@ -220,6 +220,8 @@ export class UserService {
         semesterTransitionEnabled: data.semesterTransitionEnabled !== undefined ? data.semesterTransitionEnabled : undefined,
         scheduleReminderOffsets: data.scheduleReminderOffsets !== undefined ? data.scheduleReminderOffsets : undefined,
         taskReminderOffsets: data.taskReminderOffsets !== undefined ? data.taskReminderOffsets : undefined,
+        notificationChannel: data.notificationChannel !== undefined ? data.notificationChannel : undefined,
+        whatsappNumber: data.whatsappNumber !== undefined ? data.whatsappNumber : undefined,
       },
     });
   }

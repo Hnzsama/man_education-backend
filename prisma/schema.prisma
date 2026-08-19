@@ -24,6 +24,8 @@ model User {
   semesterTransitionEnabled Boolean        @default(true)
   scheduleReminderOffsets   Int[]          @default([360, 180, 60])
   taskReminderOffsets       Int[]          @default([1440, 720])
+  notificationChannel       NotificationChannel @default(EMAIL)
+  whatsappNumber            String?
   createdAt                 DateTime       @default(now())
   updatedAt                 DateTime       @updatedAt
   semesters                 Semester[]
@@ -36,15 +38,23 @@ enum Role {
   CLASS
 }
 
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+  NONE
+}
+
 model Semester {
-  id        String   @id @default(uuid())
-  userId    String
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  isActive  Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courses   Course[]
+  id                String    @id @default(uuid())
+  userId            String
+  name              String
+  startDate         DateTime
+  endDate           DateTime
+  academicStartDate DateTime?
+  holidayStartDate  DateTime?
+  isActive          Boolean   @default(false)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses           Course[]
 }
 
 model Course {

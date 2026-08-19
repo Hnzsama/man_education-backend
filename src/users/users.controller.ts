@@ -19,7 +19,8 @@ import { UserService } from './users.service';
 import { CreateUserDto, LoginDto } from '../auth/dto/user.dto';
 import { PrismaService } from '../prisma.service';
 
-import { IsString, IsOptional, IsBoolean, IsArray, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsArray, IsInt, IsEnum } from 'class-validator';
+import { NotificationChannel } from '@prisma/client';
 
 class UpdateWhatsappGroupDto {
   @IsString()
@@ -45,6 +46,14 @@ class UpdateRemindersDto {
   @IsInt({ each: true })
   @IsOptional()
   taskReminderOffsets?: number[];
+
+  @IsEnum(NotificationChannel)
+  @IsOptional()
+  notificationChannel?: NotificationChannel;
+
+  @IsString()
+  @IsOptional()
+  whatsappNumber?: string;
 }
 
 @UseGuards(JwtAuthGuard)

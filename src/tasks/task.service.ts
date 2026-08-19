@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateTaskDto, UpdateTaskDto, TaskStatus } from './dto/task.dto';
 
@@ -12,12 +12,29 @@ export class TaskService {
       throw new ForbiddenException('Please link your WhatsApp group first before managing tasks.');
     }
 
-    const data: any = { ...dto, userId };
+    const targetUserId = user?.joinedClassId || userId;
 
-    if (dto.courseId) {
-      const course = await this.prisma.course.findUnique({ where: { id: dto.courseId } });
-      if (!course) throw new NotFoundException('Course not found');
+    // Check if user has an active semester
+    const activeSemester = await this.prisma.semester.findFirst({
+      where: { userId: targetUserId, isActive: true },
+    });
+    if (!activeSemester) {
+      throw new BadRequestException('Please create and activate a semester first before managing tasks.');
     }
+
+    // Verify course belongs to active semester
+    const course = await this.prisma.course.findFirst({
+      where: {
+        id: dto.courseId,
+        semester: {
+          userId: targetUserId,
+          isActive: true,
+        },
+      },
+    });
+    if (!course) throw new NotFoundException('Course not found in your active semester');
+
+    const data: any = { ...dto, userId };
 
     return this.prisma.task.create({
       data,
@@ -67,6 +84,31 @@ export class TaskService {
     // Only allow updating if it belongs to the user specifically (not the class, to prevent changing it for everyone)
     const task = await this.prisma.task.findFirst({ where: { id, userId } });
     if (!task) throw new NotFoundException('Task not found or unauthorized to edit class tasks');
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const targetUserId = user?.joinedClassId || userId;
+
+    // Check if user has an active semester
+    const activeSemester = await this.prisma.semester.findFirst({
+      where: { userId: targetUserId, isActive: true },
+    });
+    if (!activeSemester) {
+      throw new BadRequestException('Please create and activate a semester first before managing tasks.');
+    }
+
+    if (dto.courseId) {
+      const course = await this.prisma.course.findFirst({
+        where: {
+          id: dto.courseId,
+          semester: {
+            userId: targetUserId,
+            isActive: true,
+          },
+        },
+      });
+      if (!course) throw new NotFoundException('Course not found in your active semester');
+    }
+
     return this.prisma.task.update({ where: { id }, data: dto });
   }
 

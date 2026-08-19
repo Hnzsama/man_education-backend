@@ -15,8 +15,27 @@ export class CourseService {
     const semester = await this.prisma.semester.findFirst({ where: { id: semesterId, userId } });
     if (!semester) throw new NotFoundException('Semester not found');
 
+    let code = dto.code;
+    if (!code || code.trim() === '') {
+      const courseInitials = dto.name
+        .split(/\s+/)
+        .map(w => w[0])
+        .filter(Boolean)
+        .join('')
+        .toUpperCase();
+      
+      const semesterMatch = semester.name.match(/\d+/);
+      const semesterSuffix = semesterMatch ? semesterMatch[0] : '';
+      
+      code = `${courseInitials}${semesterSuffix}` || 'COURSE';
+    }
+
     return this.prisma.course.create({
-      data: { ...dto, semesterId },
+      data: {
+        ...dto,
+        code,
+        semesterId,
+      },
       include: { schedules: true },
     });
   }

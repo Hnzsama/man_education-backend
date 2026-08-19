@@ -57,6 +57,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # WhatsApp Baileys sessions
 /*_sessions/
+/whatsapp_session/
 *.qr.png
 
 /src/generated/prisma

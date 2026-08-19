@@ -3,9 +3,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class CreateCourseDto {
-  @ApiProperty({ example: 'SNR301' })
+  @ApiProperty({ required: false, example: 'SNR301' })
+  @IsOptional()
   @IsString()
-  code: string;
+  code?: string;
 
   @ApiProperty({ example: 'Manajemen Jaringan' })
   @IsString()

@@ -28,10 +28,9 @@ export class CreateTaskDto {
   @IsDateString()
   deadline: string;
 
-  @ApiProperty({ required: false, example: 'COURSE_UUID' })
-  @IsOptional()
+  @ApiProperty({ example: 'COURSE_UUID' })
   @IsUUID()
-  courseId?: string;
+  courseId: string;
 }
 
 export class UpdateTaskDto {
@@ -59,4 +58,9 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsEnum(Priority)
   priority?: Priority;
+
+  @ApiProperty({ required: false, example: 'COURSE_UUID' })
+  @IsOptional()
+  @IsUUID()
+  courseId?: string;
 }

@@ -13,8 +13,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { commands } from './commands';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const AUTH_FOLDER = path.join(process.cwd(), 'whatsapp_session');
 const BOT_PREFIX = '/';
