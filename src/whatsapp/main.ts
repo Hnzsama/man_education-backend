@@ -79,28 +79,30 @@ async function startBot() {
   // ── Pairing Code (jika belum terdaftar) ───────────────────────────────────
   if (!state.creds.registered) {
     const phoneNumber = (process.env.WHATSAPP_PAIRING_NUMBER || '').replace(/\D/g, '');
-    if (!phoneNumber) {
-      console.error('❌ Set WHATSAPP_PAIRING_NUMBER di .env (contoh: WHATSAPP_PAIRING_NUMBER=628123456789)');
-      process.exit(1);
-    }
-    // Tunggu sebentar agar socket siap sebelum request pairing code
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    try {
-      const code = await sock.requestPairingCode(phoneNumber);
-      const formatted = code.match(/.{1,4}/g)?.join('-') ?? code;
-      console.log('\n┌─────────────────────────────────────────┐');
-      console.log('│         🔗 WHATSAPP PAIRING CODE         │');
-      console.log('├─────────────────────────────────────────┤');
-      console.log(`│  Kode  :  ${formatted.padEnd(30)}│`);
-      console.log('├─────────────────────────────────────────┤');
-      console.log('│  Cara pakai:                            │');
-      console.log('│  1. Buka WhatsApp di HP                 │');
-      console.log('│  2. Linked Devices → Link with number   │');
-      console.log('│  3. Masukkan kode di atas               │');
-      console.log('└─────────────────────────────────────────┘\n');
-    } catch (err) {
-      console.error('❌ Gagal mendapatkan pairing code:', err);
-      process.exit(1);
+    if (phoneNumber) {
+      // Tunggu sebentar agar socket siap sebelum request pairing code
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      try {
+        const code = await sock.requestPairingCode(phoneNumber);
+        const formatted = code.match(/.{1,4}/g)?.join('-') ?? code;
+        console.log('\n┌─────────────────────────────────────────┐');
+        console.log('│         🔗 WHATSAPP PAIRING CODE         │');
+        console.log('├─────────────────────────────────────────┤');
+        console.log(`│  Kode  :  ${formatted.padEnd(30)}│`);
+        console.log('├─────────────────────────────────────────┤');
+        console.log('│  Cara pakai:                            │');
+        console.log('│  1. Buka WhatsApp di HP                 │');
+        console.log('│  2. Linked Devices → Link with number   │');
+        console.log('│  3. Masukkan kode di atas               │');
+        console.log('└─────────────────────────────────────────┘\n');
+      } catch (err) {
+        console.error('❌ Gagal mendapatkan pairing code:', err);
+        console.log('⚠️  Fallback ke QR code...');
+        // Fallback: tampilkan QR via connection.update
+      }
+    } else {
+      console.log('ℹ️  WHATSAPP_PAIRING_NUMBER tidak di-set → gunakan QR code');
+      console.log('   (Set WHATSAPP_PAIRING_NUMBER=628xxx di .env untuk pakai pairing code)\n');
     }
   }
 
