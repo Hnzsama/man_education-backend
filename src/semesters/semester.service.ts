@@ -29,7 +29,7 @@ export class SemesterService {
     }
     return this.prisma.semester.findMany({
       where: { userId: { in: userIds } },
-      include: { courses: { include: { schedules: true } } },
+      include: { courses: { include: { schedules: { include: { exceptions: true } } } } },
       orderBy: { startDate: 'desc' },
     });
   }
@@ -45,7 +45,7 @@ export class SemesterService {
     }
     const semester = await this.prisma.semester.findFirst({
       where: { id, userId: { in: userIds } },
-      include: { courses: { include: { schedules: true } } },
+      include: { courses: { include: { schedules: { include: { exceptions: true } } } } },
     });
     if (!semester) throw new NotFoundException('Semester not found');
     return semester;

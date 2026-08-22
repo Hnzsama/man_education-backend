@@ -31,6 +31,7 @@ model User {
   semesters                 Semester[]
   tasks                     Task[]
   sentReminders             SentReminder[]
+  customHolidays            CustomHoliday[]
 }
 
 enum Role {
@@ -143,4 +144,13 @@ model WhatsappQueue {
   isHidetag Boolean  @default(false)
   sent      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model CustomHoliday {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

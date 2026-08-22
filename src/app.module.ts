@@ -10,6 +10,7 @@ import { CoursesModule } from './courses/courses.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { TasksModule } from './tasks/tasks.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CustomHolidaysModule } from './custom-holidays/custom-holidays.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     CoursesModule,
     SchedulesModule,
     TasksModule,
+    CustomHolidaysModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -65,7 +65,7 @@ export class ReminderCronService {
             include: {
               courses: {
                 include: {
-                  schedules: true,
+                  schedules: { include: { exceptions: true } },
                 },
               },
             },
@@ -78,6 +78,7 @@ export class ReminderCronService {
               course: true,
             },
           },
+          customHolidays: true,
         },
       });
 
@@ -91,9 +92,10 @@ export class ReminderCronService {
           if (user.role === 'INDIVIDUAL' && !user.whatsappNumber) continue;
         }
 
-        // Fetch coordinator semesters/tasks if user joined a class
+        // Fetch coordinator semesters/tasks/holidays if user joined a class
         let userSemesters = user.semesters;
         let userTasks = user.tasks;
+        let userCustomHolidays = user.customHolidays;
 
         if (user.joinedClassId) {
           const coordinator = await this.prisma.user.findUnique({
@@ -103,7 +105,7 @@ export class ReminderCronService {
                 include: {
                   courses: {
                     include: {
-                      schedules: true,
+                      schedules: { include: { exceptions: true } },
                     },
                   },
                 },
@@ -112,11 +114,13 @@ export class ReminderCronService {
                 where: { status: { in: ['PENDING', 'IN_PROGRESS'] } },
                 include: { course: true },
               },
+              customHolidays: true,
             },
           });
           if (coordinator) {
             userSemesters = coordinator.semesters;
             userTasks = coordinator.tasks;
+            userCustomHolidays = coordinator.customHolidays;
           }
         }
 
@@ -196,14 +200,59 @@ export class ReminderCronService {
           }
         }
 
-        // Skip schedules if no active semester or if today is a public holiday
-        if (activeSem && !isTodayHoliday) {
+        // Check if today is a custom holiday
+        let isTodayCustomHoliday = false;
+        let customHolidayName = '';
+        if (userCustomHolidays) {
+          for (const ch of userCustomHolidays) {
+            const chStart = new Date(ch.startDate);
+            const chEnd = new Date(ch.endDate);
+            chStart.setHours(0, 0, 0, 0);
+            chEnd.setHours(23, 59, 59, 999);
+            if (now >= chStart && now <= chEnd) {
+              isTodayCustomHoliday = true;
+              customHolidayName = ch.name;
+              break;
+            }
+          }
+        }
+
+        // Skip schedules if no active semester or if today is a public/custom holiday
+        if (activeSem && !isTodayHoliday && !isTodayCustomHoliday) {
           // 2. Class Schedules Reminders
           for (const course of activeSem.courses) {
             for (const schedule of course.schedules) {
               if (schedule.dayOfWeek !== currDayOfWeek) continue;
 
-              const [schedHour, schedMin] = schedule.startTime.split(':').map(Number);
+              const jakartaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
+              const exception = (schedule as any).exceptions?.find((e: any) => e.date === jakartaDateStr);
+
+              let isCancelled = false;
+              let targetStartTime = schedule.startTime;
+              let targetEndTime = schedule.endTime;
+              let targetRoom = schedule.room;
+              let targetLink = schedule.link;
+              let noteText = '';
+
+              if (exception) {
+                if (exception.type === 'CANCELLED') {
+                  isCancelled = true;
+                } else if (exception.type === 'MOVED') {
+                  targetStartTime = exception.newStartTime || schedule.startTime;
+                  targetEndTime = exception.newEndTime || schedule.endTime;
+                  targetRoom = exception.newRoom || schedule.room;
+                  targetLink = exception.newLink || schedule.link;
+                  noteText = exception.note ? `\nCatatan: ${exception.note}` : '';
+                } else if (exception.type === 'NOTE') {
+                  noteText = exception.note ? `\nCatatan: ${exception.note}` : '';
+                }
+              }
+
+              if (isCancelled) {
+                continue;
+              }
+
+              const [schedHour, schedMin] = targetStartTime.split(':').map(Number);
               const schedTotalMins = schedHour * 60 + schedMin;
 
               for (const offset of user.scheduleReminderOffsets) {
@@ -221,14 +270,15 @@ export class ReminderCronService {
                   });
 
                   if (!alreadySent) {
-                    const roomInfo = schedule.room ? ` di ruang *${schedule.room}*` : '';
-                    const linkInfo = schedule.link ? `\n🔗 Link Kelas: ${schedule.link}` : '';
+                    const roomInfo = targetRoom ? ` di ruang *${targetRoom}*` : '';
+                    const linkInfo = targetLink ? `\n🔗 Link Kelas: ${targetLink}` : '';
                     const timeLabel = offset % 60 === 0 ? `${offset / 60} jam` : `${offset} menit`;
-                    const subject = 'PENGINGAT JADWAL KULIAH';
+                    const movedHeader = exception && exception.type === 'MOVED' ? ' [JADWAL PINDAH]' : '';
+                    const subject = `PENGINGAT JADWAL KULIAH${movedHeader}`;
                     const message =
-                      `🔔 *PENGINGAT JADWAL KULIAH* 🔔\n\n` +
-                      `Halo ${user.name}, kelas *${course.name}* [${course.code}] akan dimulai dalam *${timeLabel}* (pukul *${schedule.startTime}*)${roomInfo}.\n` +
-                      `👨‍&zwj;🏫 Dosen: ${course.lecturer || '-'}${linkInfo}\n\n` +
+                      `🔔 *PENGINGAT JADWAL KULIAH${movedHeader}* 🔔\n\n` +
+                      `Halo ${user.name}, kelas *${course.name}* [${course.code}] akan dimulai dalam *${timeLabel}* (pukul *${targetStartTime} - ${targetEndTime} WIB*)${roomInfo}.\n` +
+                      `👨‍🏫 Dosen: ${course.lecturer || '-'}${linkInfo}${noteText}\n\n` +
                       `Harap bersiap-siap dan hadir tepat waktu! 🚀`;
 
                     await sendNotification(subject, message);
