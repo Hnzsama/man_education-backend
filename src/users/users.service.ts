@@ -235,4 +235,170 @@ export class UserService {
   async remove(id: string): Promise<void> {
     await this.prisma.user.delete({ where: { id } });
   }
+
+  async exportData(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        semesters: {
+          include: {
+            courses: {
+              include: {
+                schedules: true
+              }
+            }
+          }
+        },
+        tasks: true
+      }
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return {
+      semesters: user.semesters.map(s => ({
+        id: s.id,
+        name: s.name,
+        startDate: s.startDate,
+        endDate: s.endDate,
+        isActive: s.isActive,
+        courses: s.courses.map(c => ({
+          id: c.id,
+          code: c.code,
+          name: c.name,
+          credits: c.credits,
+          lecturer: c.lecturer,
+          schedules: c.schedules.map(sch => ({
+            id: sch.id,
+            dayOfWeek: sch.dayOfWeek,
+            startTime: sch.startTime,
+            endTime: sch.endTime,
+            room: sch.room,
+            link: sch.link
+          }))
+        }))
+      })),
+      tasks: user.tasks.map(t => ({
+        id: t.id,
+        courseId: t.courseId,
+        title: t.title,
+        description: t.description,
+        deadline: t.deadline,
+        status: t.status,
+        priority: t.priority,
+        isGroupTask: t.isGroupTask,
+        myPart: t.myPart,
+        weightPercentage: t.weightPercentage,
+        submissionMethod: t.submissionMethod,
+        submissionLink: t.submissionLink
+      }))
+    };
+  }
+
+  async importData(userId: string, data: any) {
+    const semesters = data.semesters || [];
+    const tasks = data.tasks || [];
+
+    const semesterIdMap = new Map<string, string>();
+    const courseIdMap = new Map<string, string>();
+
+    // Process Semesters, Courses, Schedules
+    for (const sem of semesters) {
+      let dbSemester = await this.prisma.semester.findFirst({
+        where: { userId, name: sem.name }
+      });
+
+      if (!dbSemester) {
+        dbSemester = await this.prisma.semester.create({
+          data: {
+            userId,
+            name: sem.name,
+            startDate: new Date(sem.startDate),
+            endDate: new Date(sem.endDate),
+            isActive: sem.isActive
+          }
+        });
+      }
+      semesterIdMap.set(sem.id, dbSemester.id);
+
+      const courses = sem.courses || [];
+      for (const c of courses) {
+        let dbCourse = await this.prisma.course.findFirst({
+          where: { semesterId: dbSemester.id, code: c.code }
+        });
+
+        if (!dbCourse) {
+          dbCourse = await this.prisma.course.create({
+            data: {
+              semesterId: dbSemester.id,
+              code: c.code,
+              name: c.name,
+              credits: c.credits || 3,
+              lecturer: c.lecturer || null
+            }
+          });
+        }
+        courseIdMap.set(c.id, dbCourse.id);
+
+        const schedules = c.schedules || [];
+        for (const sch of schedules) {
+          const existingSch = await this.prisma.schedule.findFirst({
+            where: {
+              courseId: dbCourse.id,
+              dayOfWeek: sch.dayOfWeek,
+              startTime: sch.startTime,
+              endTime: sch.endTime
+            }
+          });
+
+          if (!existingSch) {
+            await this.prisma.schedule.create({
+              data: {
+                courseId: dbCourse.id,
+                dayOfWeek: sch.dayOfWeek,
+                startTime: sch.startTime,
+                endTime: sch.endTime,
+                room: sch.room || null,
+                link: sch.link || null
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // Process Tasks
+    for (const t of tasks) {
+      const newCourseId = t.courseId ? (courseIdMap.get(t.courseId) || null) : null;
+
+      const existingTask = await this.prisma.task.findFirst({
+        where: {
+          userId,
+          title: t.title,
+          deadline: new Date(t.deadline)
+        }
+      });
+
+      if (!existingTask) {
+        await this.prisma.task.create({
+          data: {
+            userId,
+            courseId: newCourseId,
+            title: t.title,
+            description: t.description || null,
+            deadline: new Date(t.deadline),
+            status: t.status || 'PENDING',
+            priority: t.priority || 'MEDIUM',
+            isGroupTask: t.isGroupTask || false,
+            myPart: t.myPart || null,
+            weightPercentage: t.weightPercentage || null,
+            submissionMethod: t.submissionMethod || 'OFFLINE',
+            submissionLink: t.submissionLink || null
+          }
+        });
+      }
+    }
+
+    return { success: true };
+  }
 }

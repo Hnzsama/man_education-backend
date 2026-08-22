@@ -155,6 +155,17 @@ export class UsersController {
     return result;
   }
 
+  @Get('me/export')
+  async exportData(@Request() req: any) {
+    return this.userService.exportData(req.user.userId);
+  }
+
+  @Post('me/import')
+  @HttpCode(HttpStatus.OK)
+  async importData(@Request() req: any, @Body() data: any) {
+    return this.userService.importData(req.user.userId, data);
+  }
+
   @Delete(':id')
   async remove(@Param('id') id: string) {
     await this.userService.remove(id);
