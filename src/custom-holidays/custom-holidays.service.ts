@@ -11,8 +11,8 @@ export class CustomHolidaysService {
       data: {
         userId,
         name: dto.name,
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
+        startDate: dto.startDate,
+        endDate: dto.endDate,
       },
     });
   }
@@ -47,8 +47,8 @@ export class CustomHolidaysService {
       where: { id },
       data: {
         name: dto.name,
-        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+        startDate: dto.startDate || undefined,
+        endDate: dto.endDate || undefined,
       },
     });
   }

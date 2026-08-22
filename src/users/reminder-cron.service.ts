@@ -200,16 +200,13 @@ export class ReminderCronService {
           }
         }
 
-        // Check if today is a custom holiday
+        // Check if today is a custom holiday using timezone-safe string date comparison
+        const jakartaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
         let isTodayCustomHoliday = false;
         let customHolidayName = '';
         if (userCustomHolidays) {
           for (const ch of userCustomHolidays) {
-            const chStart = new Date(ch.startDate);
-            const chEnd = new Date(ch.endDate);
-            chStart.setHours(0, 0, 0, 0);
-            chEnd.setHours(23, 59, 59, 999);
-            if (now >= chStart && now <= chEnd) {
+            if (jakartaDateStr >= ch.startDate && jakartaDateStr <= ch.endDate) {
               isTodayCustomHoliday = true;
               customHolidayName = ch.name;
               break;
@@ -224,7 +221,6 @@ export class ReminderCronService {
             for (const schedule of course.schedules) {
               if (schedule.dayOfWeek !== currDayOfWeek) continue;
 
-              const jakartaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
               const exception = (schedule as any).exceptions?.find((e: any) => e.date === jakartaDateStr);
 
               let isCancelled = false;

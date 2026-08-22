@@ -7,27 +7,27 @@ datasource db {
 }
 
 model User {
-  id                        String         @id @default(uuid())
-  email                     String         @unique
+  id                        String              @id @default(uuid())
+  email                     String              @unique
   password                  String
   name                      String
   avatar                    String?
-  role                      Role           @default(INDIVIDUAL)
-  classCode                 String?        @unique
-  whatsappGroupId           String?        @unique
+  role                      Role                @default(INDIVIDUAL)
+  classCode                 String?             @unique
+  whatsappGroupId           String?             @unique
   joinedClassId             String?
-  joinedClass               User?          @relation("ClassStudents", fields: [joinedClassId], references: [id])
-  students                  User[]         @relation("ClassStudents")
-  emailVerified             Boolean        @default(true)
+  joinedClass               User?               @relation("ClassStudents", fields: [joinedClassId], references: [id], onDelete: SetNull)
+  students                  User[]              @relation("ClassStudents")
+  emailVerified             Boolean             @default(true)
   verificationCode          String?
-  remindersEnabled          Boolean        @default(false)
-  semesterTransitionEnabled Boolean        @default(true)
-  scheduleReminderOffsets   Int[]          @default([360, 180, 60])
-  taskReminderOffsets       Int[]          @default([1440, 720])
+  remindersEnabled          Boolean             @default(false)
+  semesterTransitionEnabled Boolean             @default(true)
+  scheduleReminderOffsets   Int[]               @default([360, 180, 60])
+  taskReminderOffsets       Int[]               @default([1440, 720])
   notificationChannel       NotificationChannel @default(EMAIL)
   whatsappNumber            String?
-  createdAt                 DateTime       @default(now())
-  updatedAt                 DateTime       @updatedAt
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
   semesters                 Semester[]
   tasks                     Task[]
   sentReminders             SentReminder[]
@@ -56,6 +56,8 @@ model Semester {
   isActive          Boolean   @default(false)
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   courses           Course[]
+
+  @@index([userId, isActive])
 }
 
 model Course {
@@ -65,9 +67,13 @@ model Course {
   name       String
   credits    Int
   lecturer   String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @default(now()) @updatedAt
   semester   Semester   @relation(fields: [semesterId], references: [id], onDelete: Cascade)
   schedules  Schedule[]
   tasks      Task[]
+
+  @@unique([semesterId, code])
 }
 
 model Schedule {
@@ -78,8 +84,12 @@ model Schedule {
   endTime    String
   room       String?
   link       String?             // URL kelas online (Zoom/Meet/Teams)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @default(now()) @updatedAt
   course     Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
   exceptions ScheduleException[]
+
+  @@index([courseId, dayOfWeek])
 }
 
 model ScheduleException {
@@ -92,6 +102,8 @@ model ScheduleException {
   newRoom      String?
   newLink      String?       // link override untuk hari itu
   note         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now()) @updatedAt
   schedule     Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
   @@unique([scheduleId, date])  // satu exception per jadwal per hari
@@ -106,8 +118,13 @@ model Task {
   deadline    DateTime
   status      TaskStatus @default(PENDING)
   priority    Priority   @default(MEDIUM)
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now()) @updatedAt
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   course      Course?    @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, deadline])
 }
 
 enum TaskStatus {
@@ -135,6 +152,8 @@ model SentReminder {
   offset    Int      // the offset that triggered it (e.g. 6)
   sentAt    DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetId, offset])
 }
 
 model WhatsappQueue {
@@ -144,13 +163,15 @@ model WhatsappQueue {
   isHidetag Boolean  @default(false)
   sent      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([sent, createdAt])
 }
 
 model CustomHoliday {
   id        String   @id @default(uuid())
   userId    String
   name      String
-  startDate DateTime
-  endDate   DateTime
+  startDate String   // YYYY-MM-DD
+  endDate   String   // YYYY-MM-DD
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
