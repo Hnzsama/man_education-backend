@@ -222,6 +222,7 @@ export class UserService {
         taskReminderOffsets: data.taskReminderOffsets !== undefined ? data.taskReminderOffsets : undefined,
         notificationChannel: data.notificationChannel !== undefined ? data.notificationChannel : undefined,
         whatsappNumber: data.whatsappNumber !== undefined ? data.whatsappNumber : undefined,
+        whatsappJid: data.whatsappJid !== undefined ? data.whatsappJid : undefined,
       },
     });
   }

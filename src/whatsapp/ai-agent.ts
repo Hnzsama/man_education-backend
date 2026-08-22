@@ -267,11 +267,28 @@ export async function processAgentMessage(remoteJid: string, text: string, sock:
 
   const cleanNumber = remoteJid.split('@')[0];
   const user = await prisma.user.findFirst({
-    where: { whatsappNumber: cleanNumber }
+    where: {
+      OR: [
+        { whatsappNumber: cleanNumber },
+        { whatsappJid: remoteJid },
+      ]
+    }
   });
 
   if (!user) {
-    console.log(`[AGENT] Ignored message from unregistered number: ${cleanNumber}`);
+    // Allow unregistered users to discover their JID
+    const lowerText = text.trim().toLowerCase();
+    const isAskingJid = lowerText.includes('jid') || lowerText.includes('id saya') || lowerText.includes('nomor saya') || lowerText.includes('siapa aku') || lowerText === 'id';
+
+    if (isAskingJid) {
+      await sock.sendMessage(remoteJid, {
+        text: `Info WA kamu:\n\n📱 *Nomor:* ${cleanNumber}\n🔗 *JID/LID:* ${remoteJid}\n\nDaftarkan salah satu (atau keduanya) di profil Man Education kamu:\n👉 Buka aplikasi → Profil → WhatsApp Number / WhatsApp JID → Simpan.\n\nSetelah terdaftar, kamu bisa langsung ngobrol dengan saya.`
+      });
+    } else {
+      await sock.sendMessage(remoteJid, {
+        text: `Hei! Nomor WA kamu belum terdaftar di Man Education.\n\nDaftarkan dulu:\n1. Buka aplikasi Man Education\n2. Pergi ke menu Profil\n3. Isi kolom *WhatsApp Number* dengan nomor kamu, atau kolom *WhatsApp JID* dengan full JID kamu\n4. Simpan\n\nKetik *"id saya"* atau *"jid"* untuk melihat nomor & JID kamu.`
+      });
+    }
     return;
   }
 

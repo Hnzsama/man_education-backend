@@ -26,6 +26,7 @@ model User {
   taskReminderOffsets       Int[]               @default([1440, 720])
   notificationChannel       NotificationChannel @default(EMAIL)
   whatsappNumber            String?
+  whatsappJid               String?             // Full JID/LID e.g. 628xxx@s.whatsapp.net or xxx@lid (for WA Desktop/Web)
   quietHoursStart           String?             // HH:mm
   quietHoursEnd             String?             // HH:mm
   dailySummaryTime          String              @default("07:00") // HH:mm
