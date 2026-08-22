@@ -531,6 +531,12 @@ async function executeTool(name: string, args: any, userId: string) {
         if (f.submissionMethod !== undefined) updateData.submissionMethod = f.submissionMethod;
         if (f.submissionLink !== undefined) updateData.submissionLink = f.submissionLink;
 
+        if (updateData.deadline) {
+          await prisma.sentReminder.deleteMany({
+            where: { targetId: args.taskId }
+          });
+        }
+
         await prisma.task.updateMany({
           where: { id: args.taskId, userId },
           data: updateData

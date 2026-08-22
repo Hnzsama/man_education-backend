@@ -122,6 +122,12 @@ export class TaskService {
       if (!course) throw new NotFoundException('Course not found in your active semester');
     }
 
+    if (dto.deadline) {
+      await this.prisma.sentReminder.deleteMany({
+        where: { targetId: id },
+      });
+    }
+
     return this.prisma.task.update({ where: { id }, data: dto });
   }
 
