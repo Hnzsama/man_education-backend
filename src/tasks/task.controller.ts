@@ -24,6 +24,11 @@ export class TaskController {
     return this.taskService.create(req.user.userId, dto);
   }
 
+  @Post('quick-add')
+  async quickAdd(@Request() req: any, @Body('text') text: string) {
+    return this.taskService.quickAdd(req.user.userId, text);
+  }
+
   @Get()
   async findAll(@Request() req: any, @Query('status') status?: TaskStatus) {
     return this.taskService.findByUser(req.user.userId, status);
@@ -47,5 +52,29 @@ export class TaskController {
   @Delete(':id')
   async remove(@Request() req: any, @Param('id') id: string) {
     return this.taskService.remove(req.user.userId, id);
+  }
+
+  @Post(':taskId/checklist')
+  async addChecklistItem(@Request() req: any, @Param('taskId') taskId: string, @Body('title') title: string) {
+    return this.taskService.addChecklistItem(req.user.userId, taskId, title);
+  }
+
+  @Put(':taskId/checklist/:itemId')
+  async toggleChecklistItem(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @Param('itemId') itemId: string,
+    @Body('isCompleted') isCompleted: boolean
+  ) {
+    return this.taskService.toggleChecklistItem(req.user.userId, taskId, itemId, isCompleted);
+  }
+
+  @Delete(':taskId/checklist/:itemId')
+  async removeChecklistItem(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @Param('itemId') itemId: string
+  ) {
+    return this.taskService.removeChecklistItem(req.user.userId, taskId, itemId);
   }
 }

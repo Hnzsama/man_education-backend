@@ -1,6 +1,5 @@
-import { IsString, IsUUID, IsOptional, IsEnum, IsDate, IsDateString } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsEnum, IsDateString, IsBoolean, IsInt, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 
 export enum TaskStatus {
   PENDING = 'PENDING',
@@ -12,6 +11,14 @@ export enum Priority {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
+}
+
+export enum SubmissionMethod {
+  GFORM = 'GFORM',
+  EMAIL = 'EMAIL',
+  LMS = 'LMS',
+  UPLOAD = 'UPLOAD',
+  OFFLINE = 'OFFLINE',
 }
 
 export class CreateTaskDto {
@@ -31,6 +38,31 @@ export class CreateTaskDto {
   @ApiProperty({ example: 'COURSE_UUID' })
   @IsUUID()
   courseId: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  isGroupTask?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  myPart?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsInt()
+  weightPercentage?: number;
+
+  @ApiProperty({ required: false, enum: SubmissionMethod })
+  @IsOptional()
+  @IsEnum(SubmissionMethod)
+  submissionMethod?: SubmissionMethod;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  submissionLink?: string;
 }
 
 export class UpdateTaskDto {
@@ -63,4 +95,29 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsUUID()
   courseId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  isGroupTask?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  myPart?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsInt()
+  weightPercentage?: number;
+
+  @ApiProperty({ required: false, enum: SubmissionMethod })
+  @IsOptional()
+  @IsEnum(SubmissionMethod)
+  submissionMethod?: SubmissionMethod;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  submissionLink?: string;
 }
