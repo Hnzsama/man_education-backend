@@ -221,8 +221,13 @@ export class UserService {
         scheduleReminderOffsets: data.scheduleReminderOffsets !== undefined ? data.scheduleReminderOffsets : undefined,
         taskReminderOffsets: data.taskReminderOffsets !== undefined ? data.taskReminderOffsets : undefined,
         notificationChannel: data.notificationChannel !== undefined ? data.notificationChannel : undefined,
-        whatsappNumber: data.whatsappNumber !== undefined ? data.whatsappNumber : undefined,
-        whatsappJid: data.whatsappJid !== undefined ? data.whatsappJid : undefined,
+        whatsappNumber: (() => {
+          // Explicit number takes priority; else auto-extract from JID (e.g. '628xxx@lid' → '628xxx')
+          if (data.whatsappNumber !== undefined) return data.whatsappNumber || undefined;
+          if (data.whatsappJid) return data.whatsappJid.split('@')[0];
+          return undefined;
+        })(),
+        whatsappJid: data.whatsappJid !== undefined ? (data.whatsappJid || undefined) : undefined,
       },
     });
   }
