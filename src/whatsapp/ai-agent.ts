@@ -465,7 +465,7 @@ ATURAN:
 7. Tanggal & waktu "sekarang" akan selalu diberikan di context — pakai itu sebagai acuan untuk menafsirkan "besok", "jumat depan", "nanti malam", dst.
 8. Kamu hanya boleh membaca/mengubah data milik user yang sedang chat (userId di context). Jangan pernah mengakses data user lain.`;
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
