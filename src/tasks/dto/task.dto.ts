@@ -63,6 +63,16 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   submissionLink?: string;
+
+  @ApiProperty({ required: false, enum: TaskStatus, example: TaskStatus.PENDING })
+  @IsOptional()
+  @IsEnum(TaskStatus)
+  status?: TaskStatus;
+
+  @ApiProperty({ required: false, enum: Priority, example: Priority.MEDIUM })
+  @IsOptional()
+  @IsEnum(Priority)
+  priority?: Priority;
 }
 
 export class UpdateTaskDto {

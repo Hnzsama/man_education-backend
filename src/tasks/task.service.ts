@@ -47,7 +47,9 @@ export class TaskService {
         myPart: dto.myPart || null,
         weightPercentage: dto.weightPercentage || null,
         submissionMethod: dto.submissionMethod || 'OFFLINE',
-        submissionLink: dto.submissionLink || null
+        submissionLink: dto.submissionLink || null,
+        status: dto.status || 'PENDING',
+        priority: dto.priority || 'MEDIUM'
       },
       include: { course: true },
     });
