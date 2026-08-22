@@ -14,17 +14,20 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('Seeding database...');
 
-  // 1. Get or create a default user
-  let user = await prisma.user.findFirst();
+  // 1. Get or create hnzsama@gmail.com user
+  let user = await prisma.user.findUnique({
+    where: { email: 'hnzsama@gmail.com' },
+  });
   
   if (!user) {
-    console.log('No user found. Creating a default test user...');
+    console.log('User hnzsama@gmail.com not found. Creating...');
     const hashedPassword = await bcrypt.hash('password123', 10);
     user = await prisma.user.create({
       data: {
-        email: 'test@example.com',
-        name: 'Test Student',
+        email: 'hnzsama@gmail.com',
+        name: 'Hnzsama',
         password: hashedPassword,
+        role: 'INDIVIDUAL',
       },
     });
   }
