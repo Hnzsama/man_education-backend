@@ -12,7 +12,7 @@ export class ReminderCronService {
     private nodemailer: NodemailerService,
   ) {}
 
-  @Cron('*/5 * * * *') // Runs every 5 minutes
+  @Cron('*/1 * * * *') // Runs every 1 minute
   async handleReminders() {
     this.logger.log('Running automated reminders check...');
 
