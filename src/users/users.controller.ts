@@ -54,6 +54,10 @@ class UpdateRemindersDto {
   @IsString()
   @IsOptional()
   whatsappNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappJid?: string;
 }
 
 @UseGuards(JwtAuthGuard)
