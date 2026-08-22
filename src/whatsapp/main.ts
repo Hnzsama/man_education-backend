@@ -15,6 +15,7 @@ import { commands } from './commands';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { processAgentMessage } from './ai-agent';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -214,10 +215,10 @@ function startQueuePolling(sock: any) {
         msg.message.extendedTextMessage?.text ||
         '';
 
-      if (!text.startsWith(BOT_PREFIX)) continue;
+      if (!text) continue;
 
       console.log(`[MSG] ${remoteJid}: ${text}`);
-      await handleMessage(sock, remoteJid, text, msg).catch((err) =>
+      await processAgentMessage(remoteJid, text, sock).catch((err) =>
         console.error('[ERR] gagal handle pesan:', err),
       );
     }

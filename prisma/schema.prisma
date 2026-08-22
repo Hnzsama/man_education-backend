@@ -26,12 +26,16 @@ model User {
   taskReminderOffsets       Int[]               @default([1440, 720])
   notificationChannel       NotificationChannel @default(EMAIL)
   whatsappNumber            String?
+  quietHoursStart           String?             // HH:mm
+  quietHoursEnd             String?             // HH:mm
+  dailySummaryTime          String              @default("07:00") // HH:mm
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime            @updatedAt
   semesters                 Semester[]
   tasks                     Task[]
   sentReminders             SentReminder[]
   customHolidays            CustomHoliday[]
+  conversationTurns         ConversationTurn[]
 }
 
 enum Role {
@@ -110,19 +114,26 @@ model ScheduleException {
 }
 
 model Task {
-  id          String     @id @default(uuid())
-  userId      String
-  courseId    String?
-  title       String
-  description String?
-  deadline    DateTime
-  status      TaskStatus @default(PENDING)
-  priority    Priority   @default(MEDIUM)
-  completedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @default(now()) @updatedAt
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course      Course?    @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  id               String               @id @default(uuid())
+  userId           String
+  courseId         String?
+  title            String
+  description      String?
+  deadline         DateTime
+  status           TaskStatus           @default(PENDING)
+  priority         Priority             @default(MEDIUM)
+  completedAt      DateTime?
+  isGroupTask      Boolean              @default(false)
+  myPart           String?
+  weightPercentage Int?
+  submissionMethod SubmissionMethod     @default(OFFLINE)
+  submissionLink   String?
+  snoozedUntil     DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @default(now()) @updatedAt
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course           Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  checklist        TaskChecklistItem[]
 
   @@index([userId, status, deadline])
 }
@@ -137,6 +148,22 @@ enum Priority {
   LOW
   MEDIUM
   HIGH
+}
+
+enum SubmissionMethod {
+  GFORM
+  EMAIL
+  LMS
+  UPLOAD
+  OFFLINE
+}
+
+model TaskChecklistItem {
+  id          String   @id @default(uuid())
+  taskId      String
+  title       String
+  isCompleted Boolean  @default(false)
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 enum ExceptionType {
@@ -174,4 +201,16 @@ model CustomHoliday {
   startDate String   // YYYY-MM-DD
   endDate   String   // YYYY-MM-DD
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ConversationTurn {
+  id        String   @id @default(uuid())
+  userId    String
+  role      String   // "user", "model", "function"
+  name      String?  // for function name
+  content   String   // text or JSON string for function results/parameters
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

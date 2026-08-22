@@ -23,6 +23,7 @@ export class ReminderCronService {
       const [currHour, currMin] = jakartaTimeStr.split(':').map(Number);
       const [currYear, currMonth, currDay] = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }).split('-').map(Number);
       const currTotalMins = currHour * 60 + currMin;
+      const jakartaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
 
       // Fetch holidays for the current year
       let isTodayHoliday = false;
@@ -126,8 +127,25 @@ export class ReminderCronService {
 
         const activeSem = userSemesters.find((s) => s.isActive);
 
-        // Helper function to send notification
-        const sendNotification = async (subject: string, text: string) => {
+        // Quiet hours check logic
+        const isTimeInQuietHours = (start: string | null, end: string | null): boolean => {
+          if (!start || !end) return false;
+          const [sh, sm] = start.split(':').map(Number);
+          const [eh, em] = end.split(':').map(Number);
+          const s = sh * 60 + sm;
+          const e = eh * 60 + em;
+          const c = currHour * 60 + currMin;
+          if (s <= e) return c >= s && c <= e;
+          return c >= s || c <= e;
+        };
+
+        // Helper function to send notification (supports urgent bypass for quiet hours)
+        const sendNotification = async (subject: string, text: string, isUrgent = false) => {
+          if (!isUrgent && isTimeInQuietHours(user.quietHoursStart, user.quietHoursEnd)) {
+            this.logger.log(`Skipping non-urgent notification for ${user.name} during quiet hours.`);
+            return;
+          }
+
           if (user.notificationChannel === 'EMAIL') {
             const htmlContent = `
               <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
@@ -162,6 +180,25 @@ export class ReminderCronService {
             }
           }
         };
+
+        // 0. Combined Daily Summary Trigger
+        const currTimeStr = `${String(currHour).padStart(2, '0')}:${String(currMin).padStart(2, '0')}`;
+        const summaryKey = `daily-summary-${jakartaDateStr}`;
+        const summarySent = await this.prisma.sentReminder.findFirst({
+          where: { userId: user.id, targetId: summaryKey }
+        });
+
+        const dailySummaryTime = user.dailySummaryTime || "07:00";
+        const [sumHour, sumMin] = dailySummaryTime.split(':').map(Number);
+        const sumTotalMins = sumHour * 60 + sumMin;
+        const isSummaryTime = currTotalMins >= sumTotalMins && currTotalMins < sumTotalMins + 5;
+
+        if (isSummaryTime && !summarySent) {
+          await this.sendCombinedDailySummary(user, jakartaDateStr);
+          await this.prisma.sentReminder.create({
+            data: { userId: user.id, targetId: summaryKey, offset: 9999 }
+          });
+        }
 
         // 1. Semester Transition Notifications
         if (user.semesterTransitionEnabled) {
@@ -200,8 +237,6 @@ export class ReminderCronService {
           }
         }
 
-        // Check if today is a custom holiday using timezone-safe string date comparison
-        const jakartaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
         let isTodayCustomHoliday = false;
         let customHolidayName = '';
         if (userCustomHolidays) {
@@ -340,6 +375,128 @@ export class ReminderCronService {
       }
     } catch (err) {
       this.logger.error('Error handling reminders check:', err);
+    }
+  }
+
+  async sendCombinedDailySummary(user: any, jakartaDateStr: string) {
+    try {
+      const context = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        include: {
+          semesters: {
+            where: { isActive: true },
+            include: {
+              courses: {
+                include: {
+                  schedules: {
+                    include: {
+                      exceptions: { where: { date: jakartaDateStr } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          tasks: {
+            where: {
+              status: { in: ['PENDING', 'IN_PROGRESS'] },
+              deadline: {
+                gte: new Date(new Date().setHours(0,0,0,0)),
+                lte: new Date(new Date().setDate(new Date().getDate() + 1))
+              }
+            },
+            include: { course: true }
+          }
+        }
+      });
+
+      let activeSemester = context?.semesters[0];
+      if (user.joinedClassId) {
+        const coordinator = await this.prisma.user.findUnique({
+          where: { id: user.joinedClassId },
+          include: {
+            semesters: {
+              where: { isActive: true },
+              include: {
+                courses: {
+                  include: {
+                    schedules: {
+                      include: {
+                        exceptions: { where: { date: jakartaDateStr } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+        if (coordinator?.semesters[0]) activeSemester = coordinator.semesters[0];
+      }
+
+      const todayDayOfWeek = new Date().getDay();
+      const schedulesToday: any[] = [];
+      if (activeSemester) {
+        activeSemester.courses.forEach(c => {
+          c.schedules.forEach(s => {
+            if (s.dayOfWeek === todayDayOfWeek) {
+              schedulesToday.push({
+                courseName: c.name,
+                startTime: s.startTime,
+                endTime: s.endTime,
+                room: s.room || '-',
+                link: s.link || '-',
+                exception: s.exceptions[0] || null
+              });
+            }
+          });
+        });
+      }
+
+      const tasks = context?.tasks || [];
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        this.logger.error('Gemini API key is not configured for daily summary');
+        return;
+      }
+
+      const prompt = `Buatkan pesan ringkasan harian (Daily Summary) mahasiswa hari ini (${jakartaDateStr}).
+Gaya bahasa: santai, singkat, seperti chat ke teman.
+Gunakan format markdown WhatsApp (*bold* untuk penekanan).
+HIGHLIGHT TERLEBIH DAHULU jika ada perubahan jadwal H-0 (schedules dengan exception) paling awal dan paling menonjol!
+
+Data Jadwal Kuliah Hari Ini:
+${JSON.stringify(schedulesToday, null, 2)}
+
+Data Tugas Kuliah (Deadline Hari Ini & Besok):
+${JSON.stringify(tasks.map(t => ({ title: t.title, course: t.course?.name || 'Umum', deadline: t.deadline.toISOString() })), null, 2)}`;
+
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      if (geminiRes.ok) {
+        const json = await geminiRes.json();
+        const text = json.candidates?.[0]?.content?.parts?.[0]?.text || 'Selamat pagi! Tidak ada agenda khusus hari ini.';
+        
+        if (user.whatsappNumber) {
+          const personalJid = `${user.whatsappNumber.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+          await this.prisma.whatsappQueue.create({
+            data: {
+              groupId: personalJid,
+              message: text,
+              isHidetag: false,
+            }
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.error('Failed to generate daily combined summary:', err);
     }
   }
 }
