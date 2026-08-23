@@ -9,7 +9,10 @@ import {
   Query,
   Request,
   UseGuards,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { TaskService } from './task.service';
 import { CreateTaskDto, UpdateTaskDto, TaskStatus } from './dto/task.dto';
@@ -76,5 +79,24 @@ export class TaskController {
     @Param('itemId') itemId: string
   ) {
     return this.taskService.removeChecklistItem(req.user.userId, taskId, itemId);
+  }
+
+  @Post(':taskId/attachments')
+  @UseInterceptors(FilesInterceptor('files'))
+  async uploadAttachments(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.taskService.uploadAttachments(req.user.userId, taskId, files);
+  }
+
+  @Delete(':taskId/attachments/:id')
+  async removeAttachment(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @Param('id') id: string,
+  ) {
+    return this.taskService.removeAttachment(req.user.userId, taskId, id);
   }
 }

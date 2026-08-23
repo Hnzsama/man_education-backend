@@ -135,6 +135,7 @@ model Task {
   user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   course           Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
   checklist        TaskChecklistItem[]
+  attachments      TaskAttachment[]
 
   @@index([userId, status, deadline])
 }
@@ -215,3 +216,15 @@ model ConversationTurn {
 
   @@index([userId, createdAt])
 }
+
+model TaskAttachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  name      String   // Nama file asli
+  filePath  String   // Unpredictable random string/filename on server
+  fileType  String   // MIME type
+  fileSize  Int      // Size in bytes
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+

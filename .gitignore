@@ -61,3 +61,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 *.qr.png
 
 /src/generated/prisma
+
+# Uploads
+/uploads/*
+!/uploads/.gitkeep
+!/uploads/tasks/
+!/uploads/tasks/.gitkeep
+
