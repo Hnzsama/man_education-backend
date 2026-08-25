@@ -114,6 +114,15 @@ function startQueuePolling(sock: any) {
 
   queueInterval = setInterval(async () => {
     try {
+      const now = new Date();
+      const jakartaTimeStr = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Jakarta', hour12: false });
+      const [currHour] = jakartaTimeStr.split(':').map(Number);
+
+      // Default quiet hours: do not send reminders between 22:00 (10 PM) and 05:00 (5 AM) WIB
+      if (currHour >= 22 || currHour < 5) {
+        return;
+      }
+
       const pendingMessages = await prisma.whatsappQueue.findMany({
         where: { sent: false },
         orderBy: { createdAt: 'asc' },

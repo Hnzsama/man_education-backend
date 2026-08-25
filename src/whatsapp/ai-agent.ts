@@ -250,9 +250,23 @@ async function getUserContext(userId: string) {
     });
   }
 
+  const now = new Date();
+  const nowWIB = now.toLocaleString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }) + ' WIB';
+
   return {
     userId: user.id,
-    now: new Date().toISOString(),
+    now: now.toISOString(),
+    nowWIB,
     courses,
     activeSchedules: schedules
   };
@@ -462,7 +476,7 @@ ATURAN:
 4. Kalau info kurang (deadline tidak jelas, course tidak ketemu di daftar), TANYA balik, jangan menebak dan langsung create.
 5. Course/mata kuliah harus dicocokkan ke daftar course user yang diberikan di context. Kalau tidak ketemu yang mirip, tanya dulu apakah ini course baru.
 6. Gaya bahasa: santai, singkat, seperti chat ke teman — bukan seperti bot formal. Tidak usah pakai emoji berlebihan.
-7. Tanggal & waktu "sekarang" akan selalu diberikan di context — pakai itu sebagai acuan untuk menafsirkan "besok", "jumat depan", "nanti malam", dst.
+7. Tanggal & waktu "sekarang" diberikan di context (terutama nowWIB dalam WIB) — gunakan waktu WIB tersebut sebagai acuan utama untuk menafsirkan "besok", "lusa", "nanti", dll., dan asumsikan semua input/output waktu adalah dalam Waktu Indonesia Barat (WIB).
 8. Kamu hanya boleh membaca/mengubah data milik user yang sedang chat (userId di context). Jangan pernah mengakses data user lain.`;
 
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`, {
