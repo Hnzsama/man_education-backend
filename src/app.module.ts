@@ -10,12 +10,15 @@ import { CoursesModule } from './courses/courses.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { TasksModule } from './tasks/tasks.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CustomHolidaysModule } from './custom-holidays/custom-holidays.module';
+import { ResourcesModule } from './resources/resources.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -24,6 +27,7 @@ import { CustomHolidaysModule } from './custom-holidays/custom-holidays.module';
     SchedulesModule,
     TasksModule,
     CustomHolidaysModule,
+    ResourcesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

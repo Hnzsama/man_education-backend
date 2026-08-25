@@ -77,6 +77,7 @@ model Course {
   semester   Semester   @relation(fields: [semesterId], references: [id], onDelete: Cascade)
   schedules  Schedule[]
   tasks      Task[]
+  resources  CourseResource[]
 
   @@unique([semesterId, code])
 }
@@ -136,6 +137,7 @@ model Task {
   course           Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
   checklist        TaskChecklistItem[]
   attachments      TaskAttachment[]
+  resources        CourseResource[]
 
   @@index([userId, status, deadline])
 }
@@ -228,3 +230,36 @@ model TaskAttachment {
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
+model CourseResource {
+  id           String       @id @default(uuid())
+  courseId     String
+  taskId       String?      // opsional — link ke task tertentu
+  title        String
+  type         ResourceType
+  description  String?
+  url          String?      // untuk LINK
+  filePath     String?      // path file di server (diisi oleh worker)
+  fileName     String?      // nama file asli
+  fileSize     Int?         // bytes
+  mimeType     String?
+  uploadStatus UploadStatus @default(DONE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now()) @updatedAt
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  task         Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([courseId, createdAt])
+  @@index([taskId])
+}
+
+enum ResourceType {
+  FILE
+  LINK
+  NOTE
+}
+
+enum UploadStatus {
+  PENDING
+  DONE
+  FAILED
+}
