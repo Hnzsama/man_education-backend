@@ -43,7 +43,11 @@ export class CourseService {
   async findBySemester(semesterId: string) {
     return this.prisma.course.findMany({
       where: { semesterId },
-      include: { schedules: true },
+      include: {
+        schedules: {
+          include: { exceptions: true }
+        }
+      },
     });
   }
 
