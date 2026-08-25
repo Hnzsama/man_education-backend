@@ -201,8 +201,24 @@ export class TaskService {
 
   async remove(userId: string, id: string) {
     // Only allow deleting if it belongs to the user specifically
-    const task = await this.prisma.task.findFirst({ where: { id, userId } });
+    const task = await this.prisma.task.findFirst({
+      where: { id, userId },
+      include: { attachments: true }
+    });
     if (!task) throw new NotFoundException('Task not found or unauthorized to delete class tasks');
+
+    // Delete attachment files from disk
+    if (task.attachments && task.attachments.length > 0) {
+      for (const attachment of task.attachments) {
+        const filePath = join(process.cwd(), 'uploads', 'tasks', attachment.filePath);
+        try {
+          await fs.unlink(filePath);
+        } catch (err) {
+          console.error(`Failed to delete task file attachment from disk: ${filePath}`, err);
+        }
+      }
+    }
+
     return this.prisma.task.delete({ where: { id } });
   }
 
