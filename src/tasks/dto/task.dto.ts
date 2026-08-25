@@ -36,8 +36,9 @@ export class CreateTaskDto {
   deadline: string;
 
   @ApiProperty({ example: 'COURSE_UUID' })
+  @IsOptional()
   @IsUUID()
-  courseId: string;
+  courseId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
