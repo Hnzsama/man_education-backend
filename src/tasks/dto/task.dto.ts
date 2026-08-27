@@ -132,3 +132,11 @@ export class UpdateTaskDto {
   @IsString()
   submissionLink?: string;
 }
+
+export class CreateSubmissionDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  submissionLink?: string;
+}
+

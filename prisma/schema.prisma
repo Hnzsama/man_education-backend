@@ -37,6 +37,7 @@ model User {
   sentReminders             SentReminder[]
   customHolidays            CustomHoliday[]
   conversationTurns         ConversationTurn[]
+  submissions               TaskSubmission[]
 }
 
 enum Role {
@@ -138,6 +139,7 @@ model Task {
   checklist        TaskChecklistItem[]
   attachments      TaskAttachment[]
   resources        CourseResource[]
+  submissions      TaskSubmission[]
 
   @@index([userId, status, deadline])
 }
@@ -262,4 +264,29 @@ enum UploadStatus {
   PENDING
   DONE
   FAILED
+}
+
+model TaskSubmission {
+  id             String               @id @default(uuid())
+  taskId         String
+  userId         String
+  submissionLink String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @default(now()) @updatedAt
+  task           Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files          TaskSubmissionFile[]
+
+  @@unique([taskId, userId])
+}
+
+model TaskSubmissionFile {
+  id           String         @id @default(uuid())
+  submissionId String
+  name         String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  createdAt    DateTime       @default(now())
+  submission   TaskSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }

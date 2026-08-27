@@ -15,7 +15,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { TaskService } from './task.service';
-import { CreateTaskDto, UpdateTaskDto, TaskStatus } from './dto/task.dto';
+import { CreateTaskDto, UpdateTaskDto, TaskStatus, CreateSubmissionDto } from './dto/task.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -99,4 +99,32 @@ export class TaskController {
   ) {
     return this.taskService.removeAttachment(req.user.userId, taskId, id);
   }
+
+  // ─── Submissions ──────────────────────────────────────────────────────────
+
+  @Get(':taskId/submission')
+  async getSubmission(@Request() req: any, @Param('taskId') taskId: string) {
+    return this.taskService.getSubmission(req.user.userId, taskId);
+  }
+
+  @Post(':taskId/submission')
+  @UseInterceptors(FilesInterceptor('files'))
+  async createOrUpdateSubmission(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @Body() dto: CreateSubmissionDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.taskService.createOrUpdateSubmission(req.user.userId, taskId, dto, files);
+  }
+
+  @Delete(':taskId/submission/files/:fileId')
+  async removeSubmissionFile(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @Param('fileId') fileId: string,
+  ) {
+    return this.taskService.removeSubmissionFile(req.user.userId, taskId, fileId);
+  }
 }
+

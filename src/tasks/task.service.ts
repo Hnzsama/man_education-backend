@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { CreateTaskDto, UpdateTaskDto, TaskStatus } from './dto/task.dto';
+import { CreateTaskDto, UpdateTaskDto, TaskStatus, CreateSubmissionDto } from './dto/task.dto';
 import { join, extname } from 'path';
 import * as fs from 'fs/promises';
 import { randomUUID } from 'crypto';
@@ -446,4 +446,145 @@ JSON format to return (only return JSON, no markdown codeblocks, no extra fields
       where: { id: attachmentId },
     });
   }
+
+  async getSubmission(userId: string, taskId: string) {
+    const task = await this.findByIdUser(userId, taskId);
+    if (!task) throw new NotFoundException('Task not found');
+
+    const submission = await this.prisma.taskSubmission.findUnique({
+      where: {
+        taskId_userId: { taskId, userId },
+      },
+      include: {
+        files: true,
+      },
+    });
+
+    return submission || null;
+  }
+
+  async createOrUpdateSubmission(
+    userId: string,
+    taskId: string,
+    dto: CreateSubmissionDto,
+    files?: Express.Multer.File[],
+  ) {
+    const task = await this.findByIdUser(userId, taskId);
+    if (!task) throw new NotFoundException('Task not found');
+
+    let submission = await this.prisma.taskSubmission.findUnique({
+      where: {
+        taskId_userId: { taskId, userId },
+      },
+    });
+
+    if (!submission) {
+      submission = await this.prisma.taskSubmission.create({
+        data: {
+          taskId,
+          userId,
+          submissionLink: dto.submissionLink || null,
+        },
+      });
+    } else {
+      submission = await this.prisma.taskSubmission.update({
+        where: { id: submission.id },
+        data: {
+          submissionLink: dto.submissionLink !== undefined ? dto.submissionLink : submission.submissionLink,
+        },
+      });
+    }
+
+    if (files && files.length > 0) {
+      const uploadDir = join(process.cwd(), 'uploads', 'submissions');
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      for (const file of files) {
+        const MAX_SIZE = 10 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+          throw new BadRequestException(`File ${file.originalname} exceeds the 10MB size limit.`);
+        }
+
+        if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
+          throw new BadRequestException(`File type ${file.mimetype} is not allowed.`);
+        }
+
+        if (!validateMagicBytes(file.buffer, file.mimetype)) {
+          throw new BadRequestException(`File content verification failed for ${file.originalname}.`);
+        }
+
+        let processedBuffer: Buffer;
+        let finalMime = file.mimetype;
+        let finalExt = extname(file.originalname).toLowerCase();
+        let uniqueName = '';
+
+        if (file.mimetype.startsWith('image/')) {
+          try {
+            processedBuffer = await sharp(file.buffer)
+              .webp({ quality: 80 })
+              .toBuffer();
+            finalMime = 'image/webp';
+            finalExt = '.webp';
+            uniqueName = `${randomUUID()}${finalExt}`;
+          } catch (err) {
+            throw new BadRequestException(`Failed to process image ${file.originalname}: ${err.message}`);
+          }
+        } else {
+          processedBuffer = file.buffer;
+          uniqueName = `${randomUUID()}${finalExt}`;
+        }
+
+        const filePath = join(uploadDir, uniqueName);
+        await fs.writeFile(filePath, processedBuffer);
+
+        await this.prisma.taskSubmissionFile.create({
+          data: {
+            submissionId: submission.id,
+            name: file.originalname,
+            filePath: uniqueName,
+            fileType: finalMime,
+            fileSize: processedBuffer.length,
+          },
+        });
+      }
+    }
+
+    return this.prisma.taskSubmission.findUnique({
+      where: { id: submission.id },
+      include: { files: true },
+    });
+  }
+
+  async removeSubmissionFile(userId: string, taskId: string, fileId: string) {
+    const submissionFile = await this.prisma.taskSubmissionFile.findFirst({
+      where: {
+        id: fileId,
+        submission: {
+          taskId,
+          userId,
+        },
+      },
+      include: {
+        submission: true,
+      },
+    });
+
+    if (!submissionFile) {
+      throw new NotFoundException('Submission file not found');
+    }
+
+    const filePath = join(process.cwd(), 'uploads', 'submissions', submissionFile.filePath);
+    try {
+      await fs.unlink(filePath);
+    } catch (err) {
+      console.error(`Failed to delete file from disk: ${filePath}`, err);
+    }
+
+    await this.prisma.taskSubmissionFile.delete({
+      where: { id: fileId },
+    });
+
+    return { success: true };
+  }
 }
+
