@@ -139,7 +139,7 @@ export class TaskService {
         checklist: true,
         attachments: true,
         resources: true,
-        submission: { include: { files: true } },
+        submissions: { include: { files: true } },
       },
       orderBy: { deadline: 'asc' },
     });
