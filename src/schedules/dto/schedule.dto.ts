@@ -1,4 +1,4 @@
-import { IsString, IsInt, IsOptional, Min, Max, IsEnum } from 'class-validator';
+import { IsString, IsInt, IsOptional, Min, Max, IsEnum, ValidateIf } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateScheduleDto {
@@ -45,15 +45,17 @@ export class UpdateScheduleDto {
   @IsString()
   endTime?: string;
 
-  @ApiProperty({ required: false, example: 'Ruang 301' })
+  @ApiProperty({ required: false, example: 'Ruang 301', nullable: true })
+  @ValidateIf((o) => o.room !== null)
   @IsOptional()
   @IsString()
-  room?: string;
+  room?: string | null;
 
-  @ApiProperty({ required: false, example: 'https://zoom.us/j/123456' })
+  @ApiProperty({ required: false, example: 'https://zoom.us/j/123456', nullable: true })
+  @ValidateIf((o) => o.link !== null)
   @IsOptional()
   @IsString()
-  link?: string;
+  link?: string | null;
 }
 
 export class CreateExceptionDto {
