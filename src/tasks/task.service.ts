@@ -134,7 +134,13 @@ export class TaskService {
 
     return this.prisma.task.findMany({
       where,
-      include: { course: { include: { semester: true } }, checklist: true, attachments: true, resources: true },
+      include: {
+        course: { include: { semester: true } },
+        checklist: true,
+        attachments: true,
+        resources: true,
+        submission: { include: { files: true } },
+      },
       orderBy: { deadline: 'asc' },
     });
   }
