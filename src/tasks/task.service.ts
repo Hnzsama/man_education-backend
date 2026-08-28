@@ -115,7 +115,7 @@ export class TaskService {
         status: dto.status || 'PENDING',
         priority: dto.priority || 'MEDIUM'
       },
-      include: { course: true, attachments: true },
+      include: { course: true, attachments: true, resources: true },
     });
   }
 
@@ -134,7 +134,7 @@ export class TaskService {
 
     return this.prisma.task.findMany({
       where,
-      include: { course: { include: { semester: true } }, checklist: true, attachments: true },
+      include: { course: { include: { semester: true } }, checklist: true, attachments: true, resources: true },
       orderBy: { deadline: 'asc' },
     });
   }
@@ -151,7 +151,7 @@ export class TaskService {
 
     const task = await this.prisma.task.findFirst({
       where: { id, userId: { in: userIds } },
-      include: { course: { include: { semester: true } }, checklist: true, attachments: true },
+      include: { course: { include: { semester: true } }, checklist: true, attachments: true, resources: true },
     });
     if (!task) throw new NotFoundException('Task not found');
     return task;
@@ -195,7 +195,7 @@ export class TaskService {
     return this.prisma.task.update({
       where: { id },
       data: dto,
-      include: { course: true, checklist: true, attachments: true }
+      include: { course: true, checklist: true, attachments: true, resources: true }
     });
   }
 
