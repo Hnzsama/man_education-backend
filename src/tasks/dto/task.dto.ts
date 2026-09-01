@@ -140,3 +140,15 @@ export class CreateSubmissionDto {
   submissionLink?: string;
 }
 
+export class AddLinkAttachmentDto {
+  @ApiProperty({ example: 'https://docs.google.com/document/d/...' })
+  @IsString()
+  url: string;
+
+  @ApiProperty({ required: false, example: 'Tugas Draft Google Docs' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+}
+
+

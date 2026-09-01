@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { CreateTaskDto, UpdateTaskDto, TaskStatus, CreateSubmissionDto } from './dto/task.dto';
+import { CreateTaskDto, UpdateTaskDto, TaskStatus, CreateSubmissionDto, AddLinkAttachmentDto } from './dto/task.dto';
 import { join, extname } from 'path';
 import * as fs from 'fs/promises';
 import { randomUUID } from 'crypto';
@@ -216,11 +216,13 @@ export class TaskService {
     // Delete attachment files from disk
     if (task.attachments && task.attachments.length > 0) {
       for (const attachment of task.attachments) {
-        const filePath = join(process.cwd(), 'uploads', 'tasks', attachment.filePath);
-        try {
-          await fs.unlink(filePath);
-        } catch (err) {
-          console.error(`Failed to delete task file attachment from disk: ${filePath}`, err);
+        if (attachment.fileType !== 'link') {
+          const filePath = join(process.cwd(), 'uploads', 'tasks', attachment.filePath);
+          try {
+            await fs.unlink(filePath);
+          } catch (err) {
+            console.error(`Failed to delete task file attachment from disk: ${filePath}`, err);
+          }
         }
       }
     }
@@ -428,6 +430,40 @@ JSON format to return (only return JSON, no markdown codeblocks, no extra fields
     return results;
   }
 
+  async addLinkAttachment(userId: string, taskId: string, dto: AddLinkAttachmentDto) {
+    const task = await this.prisma.task.findFirst({ where: { id: taskId, userId } });
+    if (!task) throw new NotFoundException('Task not found');
+
+    if (!dto.url || typeof dto.url !== 'string') {
+      throw new BadRequestException('Valid URL is required');
+    }
+
+    let formattedUrl = dto.url.trim();
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = `https://${formattedUrl}`;
+    }
+
+    let linkTitle = dto.name?.trim();
+    if (!linkTitle) {
+      try {
+        const urlObj = new URL(formattedUrl);
+        linkTitle = urlObj.hostname;
+      } catch {
+        linkTitle = formattedUrl;
+      }
+    }
+
+    return this.prisma.taskAttachment.create({
+      data: {
+        taskId,
+        name: linkTitle,
+        filePath: formattedUrl,
+        fileType: 'link',
+        fileSize: 0,
+      },
+    });
+  }
+
   async removeAttachment(userId: string, taskId: string, attachmentId: string) {
     const attachment = await this.prisma.taskAttachment.findFirst({
       where: {
@@ -441,11 +477,13 @@ JSON format to return (only return JSON, no markdown codeblocks, no extra fields
       throw new NotFoundException('Attachment not found');
     }
 
-    const filePath = join(process.cwd(), 'uploads', 'tasks', attachment.filePath);
-    try {
-      await fs.unlink(filePath);
-    } catch (err) {
-      console.error(`Failed to delete file from disk: ${filePath}`, err);
+    if (attachment.fileType !== 'link') {
+      const filePath = join(process.cwd(), 'uploads', 'tasks', attachment.filePath);
+      try {
+        await fs.unlink(filePath);
+      } catch (err) {
+        console.error(`Failed to delete file from disk: ${filePath}`, err);
+      }
     }
 
     return this.prisma.taskAttachment.delete({

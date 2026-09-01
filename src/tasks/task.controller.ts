@@ -15,7 +15,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { TaskService } from './task.service';
-import { CreateTaskDto, UpdateTaskDto, TaskStatus, CreateSubmissionDto } from './dto/task.dto';
+import { CreateTaskDto, UpdateTaskDto, TaskStatus, CreateSubmissionDto, AddLinkAttachmentDto } from './dto/task.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -89,6 +89,15 @@ export class TaskController {
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     return this.taskService.uploadAttachments(req.user.userId, taskId, files);
+  }
+
+  @Post(':taskId/attachments/link')
+  async addLinkAttachment(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @Body() dto: AddLinkAttachmentDto,
+  ) {
+    return this.taskService.addLinkAttachment(req.user.userId, taskId, dto);
   }
 
   @Delete(':taskId/attachments/:id')
